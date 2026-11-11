@@ -121,7 +121,7 @@ def create_app(counter=None):
     @app.route("/health")
     def health():
         # Liveness : le processus répond.
-        return jsonify(status="ok")
+        return jsonify(status="ko")
 
     @app.route("/ready")
     def ready():

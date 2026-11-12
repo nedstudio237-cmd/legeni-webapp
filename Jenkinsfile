@@ -11,7 +11,8 @@ pipeline {
 
     environment {
         IMAGE          = "${params.DOCKERHUB_ID}/legeni-webapp"
-        VERSION        = "1.0.${env.BUILD_NUMBER}"
+        // TP 3.6 : version qui identifie la branche (1.0.N sur main, <branche>-N ailleurs)
+        VERSION        = "${env.BRANCH_NAME == 'main' ? '1.0.' + env.BUILD_NUMBER : env.BRANCH_NAME.replaceAll('[^a-zA-Z0-9.-]', '-') + '-' + env.BUILD_NUMBER}"
         TEST_CONTAINER = "webapp-ci-${env.BUILD_NUMBER}"
         CI_NETWORK     = "ci-net-${env.BUILD_NUMBER}"
     }
@@ -55,7 +56,8 @@ pipeline {
         }
 
         stage('Push Docker Hub') {
-            when { expression { params.PUSH } }
+            // TP 3.6 : seule la branche main publie une image
+            when { allOf { branch 'main'; expression { params.PUSH } } }
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub',
                                                   usernameVariable: 'DH_USER',

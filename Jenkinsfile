@@ -13,8 +13,9 @@ pipeline {
         IMAGE          = "${params.DOCKERHUB_ID}/legeni-webapp"
         // TP 3.6 : version qui identifie la branche (1.0.N sur main, <branche>-N ailleurs)
         VERSION        = "${env.BRANCH_NAME == 'main' ? '1.0.' + env.BUILD_NUMBER : env.BRANCH_NAME.replaceAll('[^a-zA-Z0-9.-]', '-') + '-' + env.BUILD_NUMBER}"
-        TEST_CONTAINER = "webapp-ci-${env.BUILD_NUMBER}"
-        CI_NETWORK     = "ci-net-${env.BUILD_NUMBER}"
+        // nom de branche ajouté : deux branches peuvent avoir un build n°1 en même temps
+        TEST_CONTAINER = "webapp-ci-${(env.BRANCH_NAME ?: 'x').replaceAll('[^a-zA-Z0-9.-]', '-')}-${env.BUILD_NUMBER}"
+        CI_NETWORK     = "ci-net-${(env.BRANCH_NAME ?: 'x').replaceAll('[^a-zA-Z0-9.-]', '-')}-${env.BUILD_NUMBER}"
     }
 
     options {

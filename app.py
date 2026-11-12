@@ -137,21 +137,3 @@ app = create_app()
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "5000")))
-
-
-def statistiques(valeurs):
-    """Fonction ajoutée sans test (TP 3.7, porte de couverture)."""
-    if not valeurs:
-        return None
-    total = 0
-    minimum = valeurs[0]
-    maximum = valeurs[0]
-    for v in valeurs:
-        total += v
-        if v < minimum:
-            minimum = v
-        if v > maximum:
-            maximum = v
-    moyenne = total / len(valeurs)
-    ecart = maximum - minimum
-    return {"total": total, "min": minimum, "max": maximum, "moyenne": moyenne, "ecart": ecart}

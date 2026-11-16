@@ -11,7 +11,6 @@ curl_net() {
     docker run --rm --network "$NETWORK" curlimages/curl:8.11.1 -sf --max-time 5 "$@"
 }
 
-[ "$PROJECT" = legeni-prod ] && { echo "panne simulée"; exit 1; }
 curl_net --retry 10 --retry-connrefused --retry-delay 2 http://web:5000/ready >/dev/null
 VERSION=$(curl_net http://web:5000/api/info | sed -E 's/.*"version": *"([^"]+)".*/\1/')
 

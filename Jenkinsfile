@@ -89,9 +89,11 @@ pipeline {
         }
         failure {
             echo "❌ ${env.JOB_NAME} #${env.BUILD_NUMBER} en échec"
-            // Avec le plugin Email Extension configuré (Manage Jenkins > System > Extended E-mail) :
-            // emailext to: 'equipe@legeni.cm', subject: "Échec ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-            //          body: "Voir ${env.BUILD_URL}console"
+            // Plugin Email Extension configuré (Manage Jenkins > System > Extended E-mail : smtp.gmail.com:465, SSL)
+            emailext to: 'nedstudio237@gmail.com',
+                     subject: "❌ Échec ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                     body: "Le pipeline ${env.JOB_NAME} #${env.BUILD_NUMBER} a échoué.\nConsole : ${env.BUILD_URL}console",
+                     attachLog: true
         }
     }
 }

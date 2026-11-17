@@ -13,7 +13,7 @@
     ansible_python_interpreter: "{{ ansible_playbook_python }}"
     target_env: staging
     app_image: nedstudio/legeni-webapp
-    app_readiness_path: /pret   # scénario 3 : mauvais chemin
+    app_readiness_path: /ready
     rollout_timeout: 180
 
   vars_files:

@@ -87,9 +87,15 @@ spec:
         checksum/config: "{{ (app_env ~ app_color) | hash('sha1') }}"
         checksum/secret: "{{ redis_password | hash('sha1') }}"
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
         - name: webapp
           image: "{{ app_image }}:{{ app_version }}"
+          lifecycle:
+            # Zéro coupure : à l'arrêt, le Pod continue de servir 5 s, le temps que le Service
+            # le retire de ses endpoints ; gunicorn reçoit ensuite SIGTERM et termine ses requêtes.
+            preStop:
+              exec: {command: ["sleep", "5"]}
           ports:
             - containerPort: 5000
           envFrom:

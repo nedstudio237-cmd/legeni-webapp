@@ -106,7 +106,7 @@ def create_app(counter=None):
         data = info()
         return render_template_string(
             PAGE,
-            color=os.getenv("APP_COLOR", "#8250df"),
+            color=os.getenv("APP_COLOR", "#0969da"),
             version=data["version"],
             env=data["env"],
             hostname=data["hostname"],

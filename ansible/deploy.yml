@@ -8,6 +8,9 @@
   gather_facts: false
 
   vars:
+    # Python qui exécute ansible-playbook : c'est lui qui a la bibliothèque « kubernetes »
+    # (sur la VM : /usr/bin/python3 ; dans Jenkins : l'environnement virtuel /opt/ansible)
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
     target_env: staging
     app_image: nedstudio/legeni-webapp
     app_readiness_path: /ready

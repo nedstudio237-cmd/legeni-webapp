@@ -1,0 +1,47 @@
+---
+- name: Copier le contexte de build de l'image Jenkins
+  become: true
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ jenkins_build_dir }}/"
+    mode: "0644"
+  loop: [Dockerfile, plugins.txt]
+
+- name: Construire l'image {{ jenkins_image }}
+  community.docker.docker_image:
+    name: "{{ jenkins_image }}"
+    source: build
+    build:
+      path: "{{ jenkins_build_dir }}"
+    # construite si absente ; reconstruite seulement sur demande (-e jenkins_rebuild=true)
+    force_source: "{{ jenkins_rebuild | bool }}"
+
+- name: Lire le GID du groupe docker (accès au socket sans chmod 666)
+  ansible.builtin.getent:
+    database: group
+    key: docker
+
+- name: Lancer le conteneur Jenkins
+  community.docker.docker_container:
+    name: "{{ jenkins_container }}"
+    image: "{{ jenkins_image }}"
+    state: started
+    restart_policy: unless-stopped
+    published_ports: "{{ jenkins_ports }}"
+    groups: ["{{ ansible_facts.getent_group.docker[1] }}"]
+    volumes:
+      - "{{ jenkins_volume }}:/var/jenkins_home"
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - name: "{{ jenkins_network }}"
+        ipv4_address: "{{ jenkins_ip }}"
+    networks_cli_compatible: true
+
+- name: Attendre que Jenkins réponde
+  ansible.builtin.uri:
+    url: http://localhost:8080/login
+    status_code: 200
+  register: jenkins_up
+  until: jenkins_up.status == 200
+  retries: 30
+  delay: 5

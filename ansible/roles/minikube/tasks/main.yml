@@ -1,0 +1,45 @@
+---
+- name: Installer minikube {{ minikube_version }}
+  become: true
+  ansible.builtin.get_url:
+    url: "https://github.com/kubernetes/minikube/releases/download/{{ minikube_version }}/minikube-linux-amd64"
+    checksum: "sha256:https://github.com/kubernetes/minikube/releases/download/{{ minikube_version }}/minikube-linux-amd64.sha256"
+    dest: /usr/local/bin/minikube
+    mode: "0755"
+
+- name: Installer kubectl {{ kubectl_version }}
+  become: true
+  ansible.builtin.get_url:
+    url: "https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/amd64/kubectl"
+    checksum: "sha256:https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/amd64/kubectl.sha256"
+    dest: /usr/local/bin/kubectl
+    mode: "0755"
+
+- name: Lire l'état du cluster
+  ansible.builtin.command: minikube status --format {% raw %}'{{.Host}}'{% endraw %}
+  register: minikube_status
+  check_mode: false             # lecture seule : s'exécute aussi en --check
+  changed_when: false
+  failed_when: false
+
+- name: Démarrer minikube (driver {{ minikube_driver }})
+  ansible.builtin.command: >-
+    minikube start --driver={{ minikube_driver }}
+    --memory={{ minikube_memory }} --cpus={{ minikube_cpus }}
+  when: minikube_status.stdout != 'Running'
+
+- name: Lister les addons
+  ansible.builtin.command: minikube addons list -o json
+  register: minikube_addons_list
+  check_mode: false             # lecture seule : s'exécute aussi en --check
+  changed_when: false
+
+- name: Activer les addons manquants
+  ansible.builtin.command: minikube addons enable {{ item }}
+  loop: "{{ minikube_addons }}"
+  when: (minikube_addons_list.stdout | from_json)[item]['Status'] != 'enabled'
+
+- name: Vérifier que le nœud est prêt
+  ansible.builtin.command: kubectl wait --for=condition=Ready node --all --timeout=180s
+  changed_when: false
+  check_mode: false

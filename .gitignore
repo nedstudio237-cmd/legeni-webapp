@@ -1,0 +1,4 @@
+# Mot de passe Ansible Vault : jamais dans Git
+.vault_pass
+*.retry
+__pycache__/

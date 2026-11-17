@@ -1,0 +1,10 @@
+---
+# Lot 2 : installe sur une machine Ubuntu vierge Docker, Minikube (+ addons) et Jenkins (image du TP 3.1).
+# Usage : ansible-playbook provision.yml -K
+- name: Provisionner la machine CI/CD
+  hosts: cicd
+  roles:
+    - role: docker          # paquets système : droits root
+      become: true
+    - role: minikube        # binaires en root, cluster lancé par l'utilisateur (le driver docker refuse root)
+    - role: jenkins         # après minikube : Jenkins rejoint le réseau Docker « minikube »

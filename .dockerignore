@@ -8,3 +8,6 @@ Jenkinsfile
 docker-compose*.yml
 nginx/
 README.md
+ansible/
+docs/
+VERSION

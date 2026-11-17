@@ -1,0 +1,105 @@
+---
+# Lot 3 : déploie Legeni WebApp dans Kubernetes (staging ou prod) avec rollback automatique.
+#   ansible-playbook deploy.yml -e target_env=staging -e app_version=1.0.0-1 --vault-password-file ~/.secrets/vault_pass
+# Démo « déploiement raté » : ajouter -e app_readiness_path=/inexistant
+- name: Déployer Legeni WebApp dans Kubernetes
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    target_env: staging
+    app_image: nedstudio/legeni-webapp
+    app_readiness_path: /ready
+    rollout_timeout: 180
+
+  vars_files:
+    - vars/vault.yml                     # mots de passe Redis chiffrés (Ansible Vault)
+
+  pre_tasks:
+    - name: Vérifier les paramètres
+      ansible.builtin.assert:
+        that:
+          - target_env in ['staging', 'prod']
+          - app_version is defined
+          - app_version != 'latest'      # jamais « latest » en production : version traçable
+        fail_msg: "Usage : -e target_env=staging|prod -e app_version=<VERSION>-<build>"
+
+    - name: Charger les paramètres de l'environnement {{ target_env }}
+      ansible.builtin.include_vars: "vars/{{ target_env }}.yml"
+
+  tasks:
+    - name: Créer le namespace
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: "{{ k8s_namespace }}"
+            labels: {env: "{{ app_env }}"}
+
+    - name: Créer le Secret Redis
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: redis-secret
+            namespace: "{{ k8s_namespace }}"
+          type: Opaque
+          stringData:
+            REDIS_PASSWORD: "{{ redis_password }}"
+      no_log: true                       # le mot de passe n'apparaît jamais dans les logs Jenkins
+
+    - name: Déployer avec rollback automatique en cas d'échec
+      block:
+        - name: Appliquer les manifests et attendre la fin du rolling update
+          kubernetes.core.k8s:
+            state: present
+            template: templates/k8s/webapp.yml.j2
+            wait: true                   # attend que les nouveaux Pods soient prêts (readinessProbe)
+            wait_timeout: "{{ rollout_timeout }}"
+
+        - name: Smoke test depuis le cluster (version déployée)
+          kubernetes.core.k8s_exec:
+            namespace: "{{ k8s_namespace }}"
+            # Un Pod Running, non en cours de suppression, de la NOUVELLE image (bug corrigé au TP 5.6)
+            pod: >-
+              {{ (lookup('kubernetes.core.k8s', kind='Pod', namespace=k8s_namespace,
+                         label_selector='app=webapp', field_selector='status.phase=Running', wantlist=True)
+                  | rejectattr('metadata.deletionTimestamp', 'defined')
+                  | selectattr('spec.containers.0.image', 'equalto', app_image ~ ':' ~ app_version)
+                  | first).metadata.name }}
+            command: >-
+              python -c "import json,urllib.request;
+              d=json.load(urllib.request.urlopen('http://webapp/api/info'));
+              assert d['version']=='{{ app_version }}', d; print(d)"
+          register: smoke
+          changed_when: false            # un test ne modifie rien
+
+        - name: Résultat
+          ansible.builtin.debug:
+            msg: "{{ app_env }} OK : {{ smoke.stdout | trim }}"
+
+      rescue:
+        - name: Retour à la version précédente
+          kubernetes.core.k8s_rollback:
+            api_version: apps/v1
+            kind: Deployment
+            name: webapp
+            namespace: "{{ k8s_namespace }}"
+
+        - name: Attendre que la version précédente soit de nouveau prête
+          kubernetes.core.k8s_info:
+            kind: Deployment
+            name: webapp
+            namespace: "{{ k8s_namespace }}"
+            wait: true
+            wait_condition: {type: Available, status: "True"}
+            wait_timeout: 120
+
+        - name: Échouer explicitement (le pipeline doit passer au rouge)
+          ansible.builtin.fail:
+            msg: "Déploiement de {{ app_version }} en {{ app_env }} échoué : rollback effectué"

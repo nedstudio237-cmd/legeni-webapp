@@ -1,0 +1,11 @@
+---
+jenkins_image: legeni/jenkins:lts          # image du TP 3.1 (Docker CLI, kubectl, Ansible + lib kubernetes, plugins)
+jenkins_container: jenkins
+jenkins_rebuild: false                     # true : reconstruire l'image après modification du Dockerfile ou des plugins
+jenkins_volume: jenkins_home
+jenkins_build_dir: /opt/legeni/jenkins-docker
+jenkins_network: minikube                  # même réseau que le cluster : l'API 192.168.49.2:8443 est joignable
+jenkins_ip: 192.168.49.10                  # IP fixe : laisse 192.168.49.2 à minikube après un redémarrage
+jenkins_ports:
+  - "8080:8080"
+  - "50000:50000"

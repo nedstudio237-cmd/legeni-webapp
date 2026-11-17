@@ -1,0 +1,7 @@
+---
+k8s_namespace: legeni-staging
+app_env: staging
+app_color: "#bf8700"        # orange : on voit tout de suite qu'on n'est pas en prod
+app_replicas: 2
+app_node_port: 30081
+redis_password: "{{ vault_redis_password_staging }}"

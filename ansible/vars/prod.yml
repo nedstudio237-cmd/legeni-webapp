@@ -1,0 +1,7 @@
+---
+k8s_namespace: legeni-prod
+app_env: prod
+app_color: "#2da44e"        # vert
+app_replicas: 3             # au moins 2 : un rolling update sans coupure a besoin de plusieurs Pods
+app_node_port: 30082
+redis_password: "{{ vault_redis_password_prod }}"
